@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chat</title>
+  <style>
+    :root { --accent:#1AAD5C; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#fff; color:#111;}
+    .wrap { height:100vh; display:flex; flex-direction:column; }
+    .head { height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-bottom:2px solid #000; }
+    .brand { display:flex; align-items:center; gap:8px; font-weight:700; }
+    .dot { width:10px; height:10px; border-radius:999px; background:var(--accent); border:2px solid #000; }
+    .msgs { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+    .msg { max-width:85%; padding:10px 12px; border:2px solid #000; border-radius:14px; }
+    .me { align-self:flex-end; background:#f8f8f8; }
+    .bot { align-self:flex-start; background:#fff; }
+    .foot { border-top:2px solid #000; padding:8px; display:flex; gap:8px; }
+    input, button { border:2px solid #000; border-radius:10px; padding:10px; }
+    button { background:#fff; cursor:pointer; }
+    button:hover { background:#f3fff7; }
+    .link { color:var(--accent); font-weight:600; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="brand"><span class="dot"></span> <span>Asistente</span></div>
+      <a class="link" href="https://tienda.casa-alonso.es/" target="_top" rel="noopener">Volver a la tienda</a>
+    </div>
+    <div id="msgs" class="msgs"></div>
+    <form id="form" class="foot">
+      <input id="inp" type="text" placeholder="Escribe tu pregunta…" autocomplete="off" style="flex:1" />
+      <button>Enviar</button>
+    </form>
+  </div>
+
+  <script>
+    const qs = (s)=>document.querySelector(s);
+    const messagesEl = qs('#msgs');
+    const form = qs('#form');
+    const inp = qs('#inp');
+
+    const url = new URL(location.href);
+    const tenant = url.searchParams.get('tenant') || 'default';
+    const sessionId = url.searchParams.get('sid') || (Date.now() + '-' + Math.random().toString(16).slice(2));
+
+    const history = [
+      { role:'system', content:`Tenant: ${tenant}. No muestres la marca Triangle AI en el chat.` }
+    ];
+
+    function addMsg(text, cls) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + cls;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = inp.value.trim();
+      if (!text) return;
+      addMsg(text, 'me');
+      inp.value = '';
+
+      history.push({ role:'user', content:text });
+
+      const thinking = document.createElement('div');
+      thinking.className = 'msg bot';
+      thinking.textContent = '…';
+      messagesEl.appendChild(thinking);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      try {
+        const res = await fetch('/v1/chat?tenant=' + encodeURIComponent(tenant), {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ messages: history, sessionId })
+        });
+        const data = await res.json();
+        thinking.remove();
+        addMsg(data.reply || '(sin respuesta)', 'bot');
+        history.push({ role:'assistant', content: data.reply || '' });
+      } catch (err) {
+        thinking.remove();
+        addMsg('Error: ' + err.message, 'bot');
+      }
+    });
+  </script>
+</body>
+</html>

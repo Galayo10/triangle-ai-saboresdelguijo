@@ -11,8 +11,9 @@
     .head { height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; border-bottom:2px solid #000; }
     .brand { display:flex; align-items:center; gap:8px; font-weight:700; }
     .dot { width:10px; height:10px; border-radius:999px; background:var(--accent); border:2px solid #000; }
+    .tag { font-size:12px; color:#333; opacity:.8; margin-left:8px; font-weight:600; }
     .msgs { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
-    .msg { max-width:85%; padding:10px 12px; border:2px solid #000; border-radius:14px; }
+    .msg { max-width:85%; padding:10px 12px; border:2px solid #000; border-radius:14px; white-space:pre-wrap; }
     .me { align-self:flex-end; background:#f8f8f8; }
     .bot { align-self:flex-start; background:#fff; }
     .foot { border-top:2px solid #000; padding:8px; display:flex; gap:8px; }
@@ -25,8 +26,12 @@
 <body>
   <div class="wrap">
     <div class="head">
-      <div class="brand"><span class="dot"></span> <span>Asistente</span></div>
-      <a class="link" href="https://tienda.casa-alonso.es/" target="_top" rel="noopener">Volver a la tienda</a>
+      <div class="brand">
+        <span class="dot"></span>
+        <span id="brandText">Asistente</span>
+        <span id="tenantTag" class="tag"></span>
+      </div>
+      <a id="storeLink" class="link" href="#" target="_top" rel="noopener">Volver a la tienda</a>
     </div>
     <div id="msgs" class="msgs"></div>
     <form id="form" class="foot">
@@ -40,10 +45,23 @@
     const messagesEl = qs('#msgs');
     const form = qs('#form');
     const inp = qs('#inp');
+    const brandText = qs('#brandText');
+    const tenantTag = qs('#tenantTag');
+    const storeLink = qs('#storeLink');
 
     const url = new URL(location.href);
-    const tenant = url.searchParams.get('tenant') || 'default';
+    const tenant = (url.searchParams.get('tenant') || 'default').toLowerCase();
     const sessionId = url.searchParams.get('sid') || (Date.now() + '-' + Math.random().toString(16).slice(2));
+
+    // Branding por tenant (ejemplo Sabores del Guijo)
+    const prettyByTenant = {
+      'sabores-del-guijo': { brand: 'Sabores del Guijo', store: 'https://tienda.casa-alonso.es/' }
+    };
+    const conf = prettyByTenant[tenant] || { brand: 'Asistente', store: '#' };
+
+    brandText.textContent = conf.brand;
+    tenantTag.textContent = tenant === 'default' ? '' : `(${tenant})`;
+    storeLink.href = conf.store;
 
     const history = [
       { role:'system', content:`Tenant: ${tenant}. No muestres la marca Triangle AI en el chat.` }

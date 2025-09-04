@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Seguridad (permitimos embeber en iframes; luego podremos restringirlo a dominios de clientes)
+// Seguridad (permitimos iframes; luego podrás restringir dominios)
 app.use(helmet({
   frameguard: false,
   crossOriginEmbedderPolicy: false,
@@ -28,7 +28,7 @@ app.use(helmet({
       "img-src": ["'self'", "data:"],
       "style-src": ["'self'", "'unsafe-inline'"],
       "script-src": ["'self'", "'unsafe-inline'"],
-      "frame-ancestors": ["*"] // más tarde: ["'self'", "https://tu-dominio-cliente.com"]
+      "frame-ancestors": ["*"]
     }
   }
 }));
@@ -42,7 +42,12 @@ app.get('/embed', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'embed.html'));
 });
 
-// Mini-resolución de tenant (simple para arrancar)
+// Ruta raíz de salud (arregla "Cannot GET /")
+app.get('/', (_req, res) => {
+  res.type('text/plain').send('Triangle AI está online ✅');
+});
+
+// Mini-resolución de tenant
 function resolveTenant(req) {
   return (req.query.tenant || req.header('x-tenant') || 'default')
     .toString()
@@ -50,7 +55,7 @@ function resolveTenant(req) {
     .toLowerCase();
 }
 
-// OpenAI (si no hay API key, devolvemos respuestas dummy para probar UI)
+// OpenAI (modo demo si no hay clave)
 const hasOpenAI = !!process.env.OPENAI_API_KEY;
 const openai = hasOpenAI ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
@@ -63,8 +68,8 @@ app.post('/v1/chat', async (req, res) => {
     const system = {
       role: 'system',
       content: `Eres el asistente de atención al cliente de este negocio.
-Marca: ${tenant}.
-Estilo: cercano, claro, con viñetas.
+Marca (tenant): ${tenant}.
+Estilo: cercano, claro y con viñetas cuando sea útil.
 No muestres la marca Triangle AI en el chat.`
     };
 
@@ -78,9 +83,9 @@ Has dicho: "${last}"
 
 • Estoy online ✅
 • Tenant: ${tenant}
-• Session: ${sessionId}
+• Sesión: ${sessionId}
 
-Sugerencias: Preguntar por productos | Horarios | Envío`
+Sugerencias: Productos | Envío | Horarios`
       });
     }
 
